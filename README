@@ -1,0 +1,283 @@
+Sagittarus Twitter API library
+===============================
+
+This library provides an interface to Twitter APIs using OAuth authentication.
+Sagittarius Scheme version 0.3.3 or later required.
+
+How to install
+--------------
+
+The library requires CMake version 2.8.4 or later to install. If you install
+Sagittarius Scheme manually, your environment has required CMake.
+
+Type following command.
+
+    $ cmake .
+    $ make install
+
+Preparation
+-----------
+
+You must register your application at https://dev.twitter.com/apps/new. The
+registration step is described on the site.
+
+Next step is to abtain the access token to use Twitter APIs. This package
+provides convenient script to do it. Run the following command;
+
+    $ sash twitauth.scm
+
+The script shows the following message,then type your consumer token and secret.
+
+    Enter consumer key: XXXXXXXXXXXXXXXXXX
+    Enter consumer secret: XXXXXXXXXXXXXXXXXXX
+
+Then it shows this message, then copy the URL to your browser and type the pin
+code.
+
+    Open the following url and type in the shown PIN.
+    http://api.twitter.com/oauth/authorize?oauth_token=XXXXXXXX
+    Input PIN: XXXXXXXX
+
+Finally you will get the access token.
+
+    (
+     (consumer-key "XXX..consumer key..XXX")
+     (consumer-secret "XXX..consumer secret..XXX")
+     (access-token "XXX..access token..XXXX")
+     (access-token-secret "XXX..access token secret ..XXX")
+    )
+
+Using Twitter APIs
+------------------
+
+Now you are ready to tweet. Following example tweet something.
+
+    (define *cred* (make-twitter-credential
+                     "XXX..consumer key..XXX"
+		     "XXX..consumer secret..XXX"
+		     "XXX..access token..XXX"
+		     "XXX..access token secret..XXX"))
+    (twitter-update/sxml *cred* "buzz buzz buzz")
+
+
+Provided APIs
+-------------
+
+The APIs which have suffix either '/json' or '/sxml' are the wrapper APIs of
+Twitter APIs. The '/json' suffixed ones return the object parsed by 'json-read'.
+The others return the SXML. All suffixed APIs can take optional arguments which
+are passed to 'call/twitter-api' procedure. Most of the keyword arguments work
+the same as Twitter API. For more details, see Twitter API documents.
+
+[Function] (make-twitter-credential consumer-key consumer-secret
+				    access-token access-token-secret)
+Creates an access token. This procedure is a thin wrapper for make-access-token
+in (net oauth).
+
+[Function] (twitter-public-timeline/json 
+	      :key (trim-user #f) (include-entities #f) :allow-other-keys opts)
+	   (twitter-public-timeline/sxml
+	      :key (trim-user #f) (include-entities #f) :allow-other-keys opts)
+Retrieve public timeline.
+
+[Function] (twitter-home-timeline/json token
+	      :key (since-id #f) (max-id #f) (count #f) (page #f) (trim-user #f)
+		   (include-rts #f) (include-entities #f) (exclude-replies #f)
+		   (contributor-details #f)
+	      :allow-other-keys opts)
+	   (twitter-home-timeline/sxml token
+	      :key (since-id #f) (max-id #f) (count #f) (page #f) (trim-user #f)
+		   (include-rts #f) (include-entities #f) (exclude-replies #f)
+		   (contributor-details #f)
+	      :allow-other-keys opts)
+Retrieves home timeline.
+
+[Function] (twitter-friends-timeline/json token
+	      :key (since-id #f) (max-id #f) (count #f) (page #f) (trim-user #f)
+		   (include-rts #f) (include-entities #f) (exclude-replies #f)
+		   (contributor-details #f)
+	      :allow-other-keys opts)
+	   (twitter-friends-timeline/sxml token
+	      :key (since-id #f) (max-id #f) (count #f) (page #f) (trim-user #f)
+		   (include-rts #f) (include-entities #f) (exclude-replies #f)
+		   (contributor-details #f)
+	      :allow-other-keys opts)
+Retrieves friends timeline.
+
+[Function] (twitter-mentions/json token
+	      :key (since-id #f) (max-id #f) (count #f) (page #f) (trim-user #f)
+		   (include-rts #f) (include-entities #f)
+		   (contributor-details #f)
+	      :allow-other-keys opts)
+	   (twitter-mentions/sxml token
+	      :key (since-id #f) (max-id #f) (count #f) (page #f) (trim-user #f)
+		   (include-rts #f) (include-entities #f)
+		   (contributor-details #f)
+	      :allow-other-keys opts)
+Retrieves mentions.
+
+[Function] (twitter-retweeted-by-me/json token
+	      :key (screen-name #f) (id #f) (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+	   (twitter-retweeted-by-me/sxml token
+	      :key (screen-name #f) (id #f) (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+Retrieves retweets retweeted by 'screen-name' user or 'id' user.
+Note: Twitter requires one of the above parameters.
+
+[Function] (twitter-retweeted-to-me/json token
+	      :key (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+	   (twitter-retweeted-to-me/sxml token
+	      :key (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+Retrieved retweets retweeted to authenticated user.
+
+[Function] (twitter-retweets-of-me/json token
+	      :key (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+	   (twitter-retweets-of-me/sxml token
+	      :key (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+Retrieves retweets retweeted to authenticated user.
+
+[Function] (twitter-retweeted-by-user/json token
+	      :key (screen-name #f) (id #f) (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+	   (twitter-retweeted-by-user/sxml token
+	      :key (screen-name #f) (id #f) (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+Retrieves retweets retweeted by specified 'screeen-name' user or 'id' user.
+
+[Function] (twitter-retweeted-to-user/json token
+	      :key (screen-name #f) (id #f) (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+	   (twitter-retweeted-to-user/sxml token
+	      :key (screen-name #f) (id #f) (count #f) (since-id #f) (max-id #f)
+	      	   (page #f) (trim-user #f) (include-entities #f)
+	      :allow-other-keys opts)
+Retrieves retweets retweeted to specified 'screeen-name' user or 'id' user.
+
+[Function] (twitter-show/json token id 
+	      :key (trim-user #f) (include-entities #f) :allow-other-keys opts)
+	   (twitter-show/sxml token id 
+	      :key (trim-user #f) (include-entities #f) :allow-other-keys opts)
+Retrieves the result of "/1/statuses/show/{id}".
+
+[Function] (twitter-update/json token message
+	     :key (in-reply-to-status-id #f) (lat #f) (long #f) (place-id #f)
+	          (display-coordinates #f) (include-entities #f) (trim-user #f)
+	     :allow-other-keys opts)
+	   (twitter-update/sxml token message
+	     :key (in-reply-to-status-id #f) (lat #f) (long #f) (place-id #f)
+	          (display-coordinates #f) (include-entities #f) (trim-user #f)
+	     :allow-other-keys opts)
+Post the message to Twitter.
+
+[Function] (twitter-destroy/json token id 
+	      :key (include-entities #f) (trim-user #f) :allow-other-keys opts)
+	   (twitter-destroy/sxml token id 
+	      :key (include-entities #f) (trim-user #f) :allow-other-keys opts)
+Delete the message specified 'id'.
+
+[Function] (twitter-retweeted-by/json token id
+	     :key (count #f) (page #f) :allow-other-keys opts)
+	   (twitter-retweeted-by/sxml token id
+	     :key (count #f) (page #f) :allow-other-keys opts)
+Retrieves the result of "/1/statuses/{id}/retweeted_by".
+
+[Function] (twitter-retweet/json token id . opts)
+	   (twitter-retweet/sxml token id . opts)
+Retweets specified message id message.
+
+[Function] (twitter-retweets/json token id
+	     :key (count #f) (page #f) (stringify-ids #f) 
+	     :allow-other-keys opts)
+	   (twitter-retweets/sxml token id
+	     :key (count #f) (page #f) (stringify-ids #f) 
+	     :allow-other-keys opts)
+Retrieves the result of "/1/statuses/retweets/{id}".
+
+[Function] (twitter-retweeted-by-ids/json token id
+	     :key (count #f) (page #f) (stringify-ids #f) 
+	     :allow-other-keys opts)
+	   (twitter-retweeted-by-ids/sxml token id
+	     :key (count #f) (page #f) (stringify-ids #f) 
+	     :allow-other-keys opts)
+Retrieves the result of "/1/statuses/{id}/retweeted_by/ids".
+
+[Function] (twitter-user-show/json token user-id screen-name
+	     :key (include-entities #f) :allow-other-keys opts)
+	   (twitter-user-show/sxml token user-id screen-name
+	     :key (include-entities #f) :allow-other-keys opts)
+token can be #f.
+Retrieves the result of "/1/users/show".
+
+[Function] (twitter-user-lookup/json token
+	     :key (user-id #f) (screen-name #f) (include-entities #f)
+	     :allow-other-keys opts)
+	   (twitter-user-lookup/sxml token
+	     :key (user-id #f) (screen-name #f) (include-entities #f)
+	     :allow-other-keys opts)
+token can be #f.
+Retrieves the result of "/1/users/lookup".
+
+[Function] (twitter-user-search/json token q
+	     :key (page #f) (per-page #f) (include-entities #f)
+	     :allow-other-keys opts)
+	   (twitter-user-search/sxml token q
+	     :key (page #f) (per-page #f) (include-entities #f)
+	     :allow-other-keys opts)
+Retrieves the result of "/1/users/search".
+
+[Function] (twitter-followers-ids/json token
+	     :key (user-id #f) (screen-name #f) (cursor #f) (stringify-ids #f)
+	     :allow-other-keys opts)
+	   (twitter-followers-ids/sxml token
+	     :key (user-id #f) (screen-name #f) (cursor #f) (stringify-ids #f)
+	     :allow-other-keys opts)
+Retrieves the result of "/1/followers/ids".
+
+[Function] (twitter-friends-ids/json token
+	     :key (user-id #f) (screen-name #f) (cursor #f) (stringify-ids #f)
+	     :allow-other-keys opts)
+	   (twitter-friends-ids/sxml token
+	     :key (user-id #f) (screen-name #f) (cursor #f) (stringify-ids #f)
+	     :allow-other-keys opts)
+Retrieves the result of "/1/friends/ids".
+
+Low level API
+-------------
+
+If the library does not provide the APIs you want to use, you can call Twitter
+APIs directly with this procedure.
+
+[Function] (call/twitter-api token method path params
+	      :key (secure? #f) (type 'xml) 
+	      	   (error-handler default-error-handler)
+	      :allow-other-keys opts)
+Arguments:
+  token must be access-token or #f.
+  path must be string and representing Twitter API path name without extension.
+  params must be a list (can be '()).
+
+Keyword arguments:
+  secure?: if this keyword is specified the procedure uses https protocol.
+  type   : the Twitter API type. This must be either 'xml or 'json.
+  error-handler: error handling procedure. This must accept 4 arguments,
+  		 body, header, hint and advice. body is the raw response from
+		 twitter. header is a list of response header. hint and advice
+		 are the value of 'oauth_problem' or 'oauth_problem_advice'
+		 respectively if the response provides it, otherwise #f.
+
+The optional argument opts will be additional headers to be sent.
+Call and retrive the given Twitter API.
