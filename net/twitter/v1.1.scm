@@ -50,6 +50,9 @@
      twitter-friendships-no-retweeets-ids
      twitter-friends-ids
      twitter-followers-ids
+     twitter-friendships-lookup
+     twitter-friendships-create
+     twitter-friendships-destroy
      ;; Users
      twitter-account-settings
      twitter-verify-credentials
@@ -96,7 +99,7 @@
 				      (contributor-details #f)
 				      (include-rts #f)
 				 :allow-other-keys opts)
-    (check-at-least-one user-id screen-name)
+    (check-at-least-one twitter-user-timeline user-id screen-name)
     (apply call/twitter-api token 'GET "/1.1/statuses/user_timeline"
 	   (make-query-params user-id screen-name count since-id max-id
 			      trim-user contributor-details
@@ -201,7 +204,7 @@
 			       (related #f)
 			       (lang #f)
 			  :allow-other-keys opts)
-    (check-at-least-one id url)
+    (check-at-least-one twitter-oembed id url)
     (apply call/twitter-api token 'GET "/1.1/statuses/oembed"
 	   (make-query-params id url maxwidth hide-thread hide-thread
 			      omit-script align related lang) opts))
@@ -242,7 +245,7 @@
 				    (stringify-ids #f)
 				    (count #f)
 			       :allow-other-keys opts)
-    (check-at-least-one user-id screen-name)
+    (check-at-least-one twitter-friends-ids user-id screen-name)
     (apply call/twitter-api token 'GET "/1.1/friends/ids"
 	   (make-query-params user-id screen-name cursor stringify-ids count)
 	   opts))
@@ -258,6 +261,33 @@
 	   (make-query-params user-id screen-name cursor stringify-ids count)
 	   opts))
 
+  (define (twitter-friendships-lookup token
+				      :key (user-id #f)
+					   (screen-name #f)
+				      :allow-other-keys opts)
+    (check-at-least-one twitter-friendships-lookup user-id screen-name)
+    (apply call/twitter-api token 'GET "/1.1/friendships/lookup"
+	   (make-query-params user-id screen-name)
+	   opts))
+
+  (define (twitter-friendships-create token
+				      :key (user-id #f)
+					   (screen-name #f)
+					   (follow #f)
+				      :allow-other-keys opts)
+    (check-at-least-one twitter-friendships-lookup user-id screen-name)
+    (apply call/twitter-api token 'POST "/1.1/friendships/create"
+	   (make-query-params user-id screen-name follow)
+	   opts))
+
+  (define (twitter-friendships-destroy token
+				       :key (user-id #f)
+					    (screen-name #f)
+				       :allow-other-keys opts)
+    (check-at-least-one twitter-friendships-lookup user-id screen-name)
+    (apply call/twitter-api token 'POST "/1.1/friendships/destroy"
+	   (make-query-params user-id screen-name)
+	   opts))
   ;; TODO the rest...
 
   ;; Users
@@ -280,7 +310,8 @@
 						(time-zone #f)
 						(lang #f)
 				      :allow-other-keys opts)
-    (check-at-least-one trend-location-woeid sleep-time-enabled 
+    (check-at-least-one twitter-update-account-settings
+			trend-location-woeid sleep-time-enabled 
 			start-sleep-time end-sleep-time time-zone lang)
     (apply call/twitter-api token 'POST "/1.1/account/settings"
 	   (make-query-params trend-location-woeid sleep-time-enabled
@@ -295,7 +326,8 @@
 				       (include-entities #f)
 				       (skip-status #f)
 				  :allow-other-keys opts)
-    (check-at-least-one name url location description
+    (check-at-least-one twitter-update-profile
+			name url location description
 			include-entities skip-status)
     (apply call/twitter-api token 'POST "/1.1/account/update_profile"
 	   (make-query-params name url location description
@@ -306,7 +338,7 @@
 			       :key (screen-name #f) (user-id #f)
 				    (include-entities #f)
 			       :allow-other-keys opts)
-    (check-at-least-one user-id screen-name)
+    (check-at-least-one twitter-users-lookup user-id screen-name)
     (apply call/twitter-api token 'GET "/1.1/users/lookup"
 	   (make-query-params user-id screen-name include-entities) opts))
   (define (twitter-users-show token 
@@ -314,7 +346,7 @@
 				  (screen-name #f) 
 				  (include-entities #f)
 			     :allow-other-keys opts)
-    (check-at-least-one user-id screen-name)
+    (check-at-least-one twitter-users-show user-id screen-name)
     (apply call/twitter-api token 'GET "/1.1/users/show"
 	   (make-query-params user-id screen-name include-entities) opts))
 
