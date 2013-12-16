@@ -128,6 +128,6 @@
 				`(,v `(,',(regex-replace-all #/-/
 							   (format "~a" v)
 							   "_")
-				       ,,v)))
+				       ,(if (boolean? ,v) "true" ,v))))
 			      (syntax->datum #'vars)))))))
 )
