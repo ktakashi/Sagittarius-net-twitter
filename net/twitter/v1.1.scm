@@ -58,6 +58,8 @@
      twitter-verify-credentials
      twitter-update-account-settings
      twitter-update-profile
+     twitter-update-profile-background-image
+     twitter-update-profile-colors
      twitter-users-lookup
      twitter-users-show
      twitter-users-search
@@ -187,6 +189,7 @@
     (apply call/twitter-api token 'POST "/1.1/statuses/update_with_media"
 	   (make-query-params possibly-sensitive in-reply-to-status-id
 			      lat long place-id display-coordinates)
+	   :use-user-parameters-for-auth #f
 	   :body `(("status" ,message)
 		   ,@(map (lambda (m)
 			    `("media[]" :file ,m
@@ -333,7 +336,41 @@
 	   (make-query-params name url location description
 			      include-entities skip-status)
 	   opts))
-  ;; TODO add acount settings
+
+  (define (twitter-update-profile-background-image token
+						   :key (image #f)
+							(tile #f)
+							(include-entities #f)
+							(skip-status #f)
+							(use #f)
+						   :allow-other-keys opts)
+    (check-at-least-one twitter-update-profile-background-image
+			image image tile use)
+    (apply call/twitter-api token 'POST 
+	   "/1.1/account/update_profile_background_image"
+	   (make-query-params tile include-entities skip-status use)
+	   :body (and image
+		      `(("image" :file ,image
+			 :content-transfer-encoding "base64")))
+	   opts))
+
+  (define (twitter-update-profile-colors token
+					 :key (profile-background-color #f)
+					      (profile-link-color #f)
+					      (profile-sidebar-border-color #f)
+					      (profile-text-color #f)
+					      (include-entities #f)
+					      (skip-status #f)
+					 :allow-other-keys opts)
+
+    (apply call/twitter-api token 'POST "/1.1/account/update_profile_colors"
+	   (make-query-params profile-background-color
+			      profile-link-color
+			      profile-sidebar-border-color
+			      profile-text-color
+			      include-entities skip-status)
+	   opts))
+
   (define (twitter-users-lookup token
 			       :key (screen-name #f) (user-id #f)
 				    (include-entities #f)

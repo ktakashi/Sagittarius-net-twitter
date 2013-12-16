@@ -69,6 +69,7 @@
 				 (type 'json) ;; 1.1 doesn't support xml anymore
 				 (error-handler default-error-handler)
 				 (body #f)
+				 (use-user-parameters-for-auth #t)
 			    :allow-other-keys opts)
     (define composed-path (format "~a.~a" path type))
     (define (list->alist lis)
@@ -84,6 +85,7 @@
 			      "http://api.twitter.com") composed-path)
 	   token
 	   :user-parameters params
+	   :use-user-parameters-for-auth use-user-parameters-for-auth
 	   :request-method method
 	   :body body
 	   :additional-headers (list->alist opts))
