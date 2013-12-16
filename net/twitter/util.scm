@@ -68,6 +68,7 @@
 			    :key (secure? #f)
 				 (type 'json) ;; 1.1 doesn't support xml anymore
 				 (error-handler default-error-handler)
+				 (body #f)
 			    :allow-other-keys opts)
     (define composed-path (format "~a.~a" path type))
     (define (list->alist lis)
@@ -84,6 +85,7 @@
 	   token
 	   :user-parameters params
 	   :request-method method
+	   :body body
 	   :additional-headers (list->alist opts))
 	  (receive (status header body)
 	      (case method
@@ -92,8 +94,10 @@
 					     (oauth-compose-query params))
 			      :secure secure?
 			      opts))
-		((POST) (apply http-post "api.twitter.com" composed-path
-			       (oauth-compose-query params)
+		((POST) (apply http-post "api.twitter.com"
+			       (string-append composed-path "?"
+					     (oauth-compose-query params))
+			       body
 			       :secure secure? opts)))
 	    (values body header (not (string=? status "200")) status))))
     (define (retrieve body header hint advice)

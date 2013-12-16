@@ -41,6 +41,7 @@
      twitter-destroy
      twitter-update
      twitter-retweet
+     twitter-update-with-media
      twitter-oembed
      twitter-retweeters-ids
      ;; Search
@@ -50,11 +51,17 @@
      twitter-friends-ids
      twitter-followers-ids
      ;; Users
+     twitter-account-settings
+     twitter-verify-credentials
+     twitter-update-account-settings
+     twitter-update-profile
      twitter-users-lookup
      twitter-users-show
      twitter-users-search
      )
     (import (rnrs)
+	    (sagittarius)
+	    (net oauth)
 	    (net twitter util))
 
   (define-syntax check-at-least-one
@@ -142,7 +149,7 @@
 			   :key (trim-user #f)
 			   :allow-other-keys opts)
     (apply call/twitter-api token 'POST (format "/1.1/statuses/destroy/~a" id)
-	   (make-query-params include-entities) opts))
+	   (make-query-params trim-user) opts))
 
   (define (twitter-update token message
 			  :key (in-reply-to-status-id #f)
@@ -153,10 +160,12 @@
 			       (trim-user #f)
 			  :allow-other-keys opts)
     (apply call/twitter-api token 'POST "/1.1/statuses/update"
-	   `(("status" ,message)
-	     ,@(make-query-params in-reply-to-status-id
-				  lat long place-id display-coordinates
-				  trim-user)) opts))
+	   (make-query-params in-reply-to-status-id
+			      lat long place-id display-coordinates
+			      trim-user)
+	   :body (string-append "status=" message)
+	   :content-type "application/x-www-form-urlencoded"
+	   opts))
 
   (define (twitter-retweet token id
 			   :key (trim-user #f)
@@ -164,7 +173,22 @@
     (apply call/twitter-api token 'POST (format "/1.1/statuses/retweet/~a" id)
 	   (make-query-params trim-user) opts))
   
-  ;; TODO update-with-media
+  (define (twitter-update-with-media token message media
+			  :key (possibly-sensitive #f)
+			       (in-reply-to-status-id #f)
+			       (lat #f)
+			       (long #f)
+			       (place-id #f)
+			       (display-coordinates #f)
+			  :allow-other-keys opts)
+    (apply call/twitter-api token 'POST "/1.1/statuses/update_with_media"
+	   (make-query-params possibly-sensitive in-reply-to-status-id
+			      lat long place-id display-coordinates)
+	   :body `(("status" ,message)
+		   ,@(map (lambda (m)
+			    `("media[]" :file ,m
+			      :content-transfer-encoding "base64")) media))
+	   opts))
 
   (define (twitter-oembed token
 			  :key (id #f)
@@ -237,6 +261,46 @@
   ;; TODO the rest...
 
   ;; Users
+  (define (twitter-account-settings token . opts)
+    (apply call/twitter-api token 'GET "/1.1/account/settings"
+	   '() opts))
+
+  (define (twitter-verify-credentials token
+				      :key (include-entities #f)
+					   (skip-status #f)
+				      :allow-other-keys opts)
+    (apply call/twitter-api token 'GET "/1.1/account/verify_credentials"
+	   (make-query-params include-entities skip-status) opts))
+
+  (define (twitter-update-account-settings token
+					   :key (trend-location-woeid #f)
+						(sleep-time-enabled #f)
+						(start-sleep-time #f)
+						(end-sleep-time #f)
+						(time-zone #f)
+						(lang #f)
+				      :allow-other-keys opts)
+    (check-at-least-one trend-location-woeid sleep-time-enabled 
+			start-sleep-time end-sleep-time time-zone lang)
+    (apply call/twitter-api token 'POST "/1.1/account/settings"
+	   (make-query-params trend-location-woeid sleep-time-enabled
+			      start-sleep-time end-sleep-time time-zone lang)
+	   opts))
+
+  (define (twitter-update-profile token
+				  :key (name #f)
+				       (url #f)
+				       (location #f)
+				       (description #f)
+				       (include-entities #f)
+				       (skip-status #f)
+				  :allow-other-keys opts)
+    (check-at-least-one name url location description
+			include-entities skip-status)
+    (apply call/twitter-api token 'POST "/1.1/account/update_profile"
+	   (make-query-params name url location description
+			      include-entities skip-status)
+	   opts))
   ;; TODO add acount settings
   (define (twitter-users-lookup token
 			       :key (screen-name #f) (user-id #f)
