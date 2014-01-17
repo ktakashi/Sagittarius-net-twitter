@@ -65,7 +65,7 @@
   ;; rest arguments will be passed to http-get, http-post or
   ;; access-protected-resource as extra headers.
   (define (call/twitter-api token method path params
-			    :key (secure? #f)
+			    :key (secure? #t)
 				 (type 'json) ;; 1.1 doesn't support xml anymore
 				 (error-handler default-error-handler)
 				 (body #f)

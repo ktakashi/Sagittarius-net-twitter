@@ -346,7 +346,7 @@
 						   :allow-other-keys opts)
     (check-at-least-one twitter-update-profile-background-image
 			image image tile use)
-    (apply call/twitter-api token 'POST 
+    (apply call/twitter-api token 'POST
 	   "/1.1/account/update_profile_background_image"
 	   (make-query-params tile include-entities skip-status use)
 	   :body (and image
