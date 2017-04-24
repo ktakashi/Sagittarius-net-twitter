@@ -32,7 +32,7 @@
   (let* ((token (oauth-request-temporary-credential
 		 conn "/oauth/request_token"))
 	 (pin (get-pin (make-oauth-authorization-url
-			"http://api.twitter.com/oauth/authorize" token))))
+			"https://api.twitter.com/oauth/authorize" token))))
     ;; obtain the access token
     (let1 access-token (oauth-request-access-token
 			conn "/oauth/access_token" token pin)
