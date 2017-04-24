@@ -29,13 +29,16 @@
 ;;;  
 
 (library (net twitter rest post)
-    (export twitter-statuses-update)
+    (export twitter-statuses-update
+	    twitter-media-upload)
     (import (rnrs)
 	    (rfc oauth)
 	    (rfc http-connections)
 	    (rfc uri)
+	    (rfc mime)
 	    (srfi :13)
 	    (sagittarius)
+	    (sagittarius control)
 	    (net twitter rest util))
 
   (define (compose-form-parameters parameters)
@@ -77,5 +80,43 @@
        (send-post-request conn "/1.1/statuses/update.json"
 			  (cons* :status message parameters)
 			  headers))))
-    
+  (define (send-multipart-request conn uri parts parameters headers)
+  (define boundary (mime-make-boundary))
+  (apply oauth-request conn 'POST uri
+	 :content-type (string-append "multipart/form-data; boundary=\"" boundary "\"")
+	 :mime-version "1.0"
+	 :authorization (apply oauth-authorization-header
+			       conn 'POST uri (encode-parameters parameters))
+	 :sender (http-multipart-sender (oauth-connection-http-connection conn)
+					boundary
+					parts)
+	 headers))
+
+  (define (make-content-disposision name)
+    `(("content-disposition" ("form-data" ("name" . ,name)))))
+  (define (change-domain conn domain)
+    (open-oauth-connection!
+     (make-oauth-connection
+      (make-http2-connection domain #t)
+      (oauth-connection-consumer-key conn)
+      (oauth-connection-access-token conn)
+      (oauth-signer-clone (oauth-connection-signer conn)))))
+  (define (twitter-media-upload conn media-type data . options)
+    (let-values (((parameters headers) (twitter-parameter&headers options)))
+      (let ((changed (change-domain conn "upload.twitter.com"))
+	    (type&subtype (mime-parse-content-type media-type)))
+	(rlet1 r (wrap-twitter-response
+		  (send-multipart-request
+		   (change-domain conn "upload.twitter.com")
+		   "/1.1/media/upload.json"
+		   (list (make-mime-part
+			  :content data
+			  :type (car type&subtype)
+			  :subtype (cadr type&subtype)
+			  :transfer-encoding "base64"
+			  :headers (make-content-disposision "media_data")))
+		   parameters
+		   headers))
+	  (close-oauth-connection! changed)))))
+
   )
