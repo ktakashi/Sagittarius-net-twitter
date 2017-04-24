@@ -1,4 +1,6 @@
-(import (rnrs) (net oauth)
+(import (rnrs)
+	(rfc oauth)
+	(rfc http-connections)
 	(sagittarius control)
 	(srfi :13 strings)
 	(match))
@@ -13,27 +15,27 @@
             ((string-null? pin) (loop))
             (else pin)))))
 
-(define (report token)
+(define (report key secret token)
   (print "(")
-  (print " (consumer-key \"" (token-key (token-consumer token)) "\")")
-  (print " (consumer-secret \""
-	 (token-secret (token-consumer token))"\")")
-  (print " (access-token \""(token-key token)"\")")
-  (print " (access-token-secret \""(token-secret token)"\")")
+  (print " (consumer-key \"" key "\")")
+  (print " (consumer-secret \"" secret"\")")
+  (print " (access-token \""(oauth-access-token-token token)"\")")
+  (print " (access-token-secret \""(oauth-access-token-token-secret token)"\")")
   (print ")"))
 
 (define (twitauth key secret)
-  (let* ((token (obtain-request-token
-		 "http://api.twitter.com/oauth/request_token"
-		 (make-consumer-token :key key :secret secret)))
-	 (pin (get-pin (make-authorization-uri
+  (define conn (make-oauth-connection
+		(make-http1-connection "api.twitter.com" #t)
+		key
+		(make-oauth-hmac-sha1-signer (string->utf8 secret))))
+  (let* ((token (oauth-request-temporary-credential
+		 conn "/oauth/request_token"))
+	 (pin (get-pin (make-oauth-authorization-url
 			"http://api.twitter.com/oauth/authorize" token))))
-    ;; authorize the request token manually.
-    (authorize-request-token token pin)
     ;; obtain the access token
-    (let1 access-token (obtain-access-token 
-			"http://api.twitter.com/oauth/access_token" token)
-      (report access-token))))
+    (let1 access-token (oauth-request-access-token
+			conn "/oauth/access_token" token pin)
+      (report key secret access-token))))
 
 (define (main args)
   (match (cdr args)
