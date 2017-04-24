@@ -2,6 +2,7 @@
 	(rfc oauth)
 	(rfc http-connections)
 	(sagittarius control)
+	(sagittarius stty)
 	(srfi :13 strings)
 	(match))
 
@@ -46,7 +47,9 @@
 	 (format (current-error-port) "aborted.") (exit 1))
        (display "Enter consumer secret: ")
        (flush-output-port (current-output-port))
-       (let1 secret (get-line (current-input-port))
+       (let1 secret (with-stty '(not echo)
+		      (lambda () (get-line (current-input-port))))
+	 (newline (current-output-port))
 	 (when (eof-object? key)
 	   (format (current-error-port) "aborted.") (exit 1))
 	 (twitauth key secret))))
