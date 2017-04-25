@@ -89,12 +89,27 @@
 			  (cons* :status message parameters)
 			  headers))))
   (define (send-multipart-request conn uri parts parameters headers)
-    (apply oauth-request conn 'POST uri
-	   :authorization (apply oauth-authorization-header
-				 conn 'POST uri (encode-parameters parameters))
-	   :sender (http-multipart-sender
-		    (oauth-connection-http-connection conn) parts)
-	   headers))
+    (define (compose-uri uri parameter)
+      (define (concat parameter)
+	(let-values (((out extract) (open-string-output-port)))
+	  (let loop ((parameter parameter) (first? #t))
+	    (if (null? parameter)
+		(extract)
+		(let ((k (car parameter))
+		      (v (cadr parameter)))
+		  (unless first? (put-string out "&"))
+		  (put-string out (keyword->string k))
+		  (put-string out "=")
+		  (put-string out v)
+		  (loop (cddr parameter) #f))))))
+      (string-append uri "?" (concat parameter)))
+    (let ((encoded (encode-parameters parameters)))
+      (apply oauth-request conn 'POST (compose-uri uri encoded)
+	     :authorization (apply oauth-authorization-header
+				   conn 'POST uri encoded)
+	     :sender (http-multipart-sender
+		      (oauth-connection-http-connection conn) parts)
+	     headers)))
 
   (define (make-content-disposision name)
     `(("content-disposition" ("form-data" ("name" . ,name)))))
@@ -154,8 +169,7 @@
 	      :type "application"
 	      :subtype "octet-stream"
 	      :transfer-encoding "binary"
-	      :headers (cons `("content-length" (,(number->string (bytevector-length data))))
-			     (make-content-disposision "media"))))
+	      :headers (make-content-disposision "media")))
        (cons* :command "APPEND"
 	      :media_id media-id
 	      :segment_index (number->string index)
@@ -163,7 +177,7 @@
        headers))
     (define (send conn data index parameters header)
       (let-values (((s h b) (send-part conn data index parameters header)))
-	(unless (string-ref s 0 #\2)
+	(unless (eqv? (string-ref s 0) #\2)
 	  (raise (condition
 		  (make-http-error s h "")
 		  (make-who-condition
@@ -219,7 +233,7 @@
 	   (media-id (find-media-id json))
 	   (port (get-port data)))
       (guard (e (else (close-port port) (raise e)))
-	(apply twitter-media-chunk-upload/append new-conn json port
+	(apply twitter-media-chunk-upload/append new-conn media-id port
 	       :buffer-size buffer-size opt)
 	(close-port port))
       (rlet1 r (apply twitter-media-chunk-upload/finalize new-conn media-id opt)

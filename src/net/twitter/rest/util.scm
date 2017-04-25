@@ -59,14 +59,13 @@
 	      (make-http-error status header (utf8->string body))
 	      (make-who-condition 'parse-twitter-response)
 	      (make-message-condition "content-type is not JSON"))))
-    (unless (string-ref status 0 #\2)
+    (unless (eqv? (string-ref status 0) #\2)
       (raise (condition
 	      (twitter-errors-errors
 	       (json-string->object (utf8->string body) twitter-error-builder))
 	      (make-http-error status header (utf8->string body))
 	      (make-who-condition 'parse-twitter-response)
-	      (make-message-condition "got error status")
-	      (make-irritants-condition (hashtable->alist ht)))))
+	      (make-message-condition "got error status"))))
     (json-read (open-string-input-port (utf8->string body))))
 
 
