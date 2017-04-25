@@ -40,6 +40,7 @@
 	    (rfc oauth)
 	    (rfc :5322)
 	    (sagittarius)
+	    (util hashtables)
 	    (net twitter conditions)
 	    (only (net twitter connections) make-twitter-connection))
 
@@ -58,13 +59,14 @@
 	      (make-http-error status header (utf8->string body))
 	      (make-who-condition 'parse-twitter-response)
 	      (make-message-condition "content-type is not JSON"))))
-    (unless (string=? status "200")
+    (unless (string-ref status 0 #\2)
       (raise (condition
 	      (twitter-errors-errors
 	       (json-string->object (utf8->string body) twitter-error-builder))
 	      (make-http-error status header (utf8->string body))
 	      (make-who-condition 'parse-twitter-response)
-	      (make-message-condition "got error status"))))
+	      (make-message-condition "got error status")
+	      (make-irritants-condition (hashtable->alist ht)))))
     (json-read (open-string-input-port (utf8->string body))))
 
 
