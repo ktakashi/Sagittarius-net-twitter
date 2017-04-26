@@ -85,7 +85,18 @@
       :desplay_coordinates
       :trim_user
       :media_ids
-      :status))
+      :include_entities
+      :skip_status
+      :include_email
+      :resources
+      :stringify_ids
+      :cursor
+      :tweet_id
+      :count
+      :description
+      :url
+      :timeline_order
+      ))
   (define (twitter-parameter&headers options)
     (define (err)
       (assertion-violation 'twitter-parameter&headers "invalid list of options"

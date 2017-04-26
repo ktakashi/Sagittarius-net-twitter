@@ -29,13 +29,13 @@
 ;;;  
 
 (library (net twitter rest post)
-    (export twitter-statuses-update
-	    twitter-media-upload
-	    twitter-media-chunk-upload
-	    twitter-media-chunk-upload/init
-	    twitter-media-chunk-upload/append
-	    twitter-media-chunk-upload/finalize
-
+    (export twitter:collections/create
+	    twitter:statuses/update
+	    twitter:media/upload
+	    twitter:media/chunk-upload
+	    twitter:media/chunk-upload@init
+	    twitter:media/chunk-upload@append
+	    twitter:media/chunk-upload@finalize
 	    )
     (import (rnrs)
 	    (rfc oauth)
@@ -82,12 +82,27 @@
 				       (compose-form-parameters parameters))
 	   headers))
 
-  (define (twitter-statuses-update conn message . options)
-    (let-values (((parameters headers) (twitter-parameter&headers options)))
-      (wrap-twitter-response
-       (send-post-request conn "/1.1/statuses/update.json"
-			  (cons* :status message parameters)
-			  headers))))
+  (define-syntax define-twitter-simple-post-api
+    (lambda (x)
+      (define (keyword&id id)
+	(cons (symbol->keyword (syntax->datum id)) id))
+      (syntax-case x ()
+	((k name uri req ...)
+	 (with-syntax ((((key . req) ...)
+			(datum->syntax #'k (map keyword&id #'(req ...)))))
+	   #'(define (name conn req ... . opt)
+	       (let-values (((parameters headers)
+			     (twitter-parameter&headers opt)))
+		 (wrap-twitter-response
+		  (send-post-request conn uri
+				     (append `(key ,req) ... parameters)
+				     headers)))))))))
+  (define-twitter-simple-post-api twitter:collections/create
+    "/1.1/collections/create" name)
+  (define-twitter-simple-post-api twitter:statuses/update
+    "/1.1/statuses/update.json" status)
+
+;;; multipart request
   (define (send-multipart-request conn uri parts parameters headers)
     (define (compose-uri uri parameter)
       (define (concat parameter)
@@ -123,7 +138,7 @@
   
   (define-constant +upload-server+ "upload.twitter.com")
   
-  (define (twitter-media-upload conn media-type data . options)
+  (define (twitter:media/upload conn media-type data . options)
     (let-values (((parameters headers) (twitter-parameter&headers options)))
       (let ((changed (change-domain conn +upload-server+))
 	    (type&subtype (mime-parse-content-type media-type)))
@@ -145,7 +160,7 @@
 	conn
 	(apply change-domain conn +upload-server+ opt)))
 		  
-  (define (twitter-media-chunk-upload/init conn total-bytes media-type . opt)
+  (define (twitter:media/chunk-upload@init conn total-bytes media-type . opt)
     (let-values (((parameters headers) (twitter-parameter&headers opt)))
       (let ((conn (ensure-upload-domain conn)))
 	(wrap-twitter-response
@@ -157,7 +172,7 @@
 	  headers)))))
 
   (define-constant +default-buffer-size+ (* 1024 10))
-  (define (twitter-media-chunk-upload/append conn media-id data
+  (define (twitter:media/chunk-upload@append conn media-id data
 	     :key (segment-index 0)
 		  (buffer-size +default-buffer-size+)
 	     :allow-other-keys opt)
@@ -198,7 +213,7 @@
 		 (loop (+ i 1)
 		       (get-bytevector-n! data buffer 0 buffer-size))))))))
 
-  (define (twitter-media-chunk-upload/finalize conn media-id . opt)
+  (define (twitter:media/chunk-upload@finalize conn media-id . opt)
     (let-values (((parameters headers) (twitter-parameter&headers opt)))
       (let ((conn (ensure-upload-domain conn)))
 	(wrap-twitter-response
@@ -208,7 +223,7 @@
 				   parameters)
 			    headers)))))
 
-  (define (twitter-media-chunk-upload conn media-type data
+  (define (twitter:media/chunk-upload conn media-type data
 				      :key (buffer-size +default-buffer-size+)
 				      :allow-other-keys opt)
     (define (get-size data)
@@ -228,15 +243,14 @@
     (define (find-media-id json)
       (cdr (find (lambda (v) (string=? (car v) "media_id_string"))
 		 (vector->list json))))
-    (let* ((json (apply twitter-media-chunk-upload/init new-conn
+    (let* ((json (apply twitter:media/chunk-upload@init new-conn
 			(get-size data) media-type opt))
 	   (media-id (find-media-id json))
 	   (port (get-port data)))
       (guard (e (else (close-port port) (raise e)))
-	(apply twitter-media-chunk-upload/append new-conn media-id port
+	(apply twitter:media/chunk-upload@append new-conn media-id port
 	       :buffer-size buffer-size opt)
 	(close-port port))
-      (rlet1 r (apply twitter-media-chunk-upload/finalize new-conn media-id opt)
-	(close-oauth-connection! new-conn))))
-    
+      (rlet1 r (apply twitter:media/chunk-upload@finalize new-conn media-id opt)
+	(close-oauth-connection! new-conn))))    
   )
