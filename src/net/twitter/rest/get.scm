@@ -37,6 +37,18 @@
 	    twitter:collections/entries
 	    twitter:collections/list
 	    twitter:collections/show
+	    twitter:direct-messages
+	    twitter:direct-messages/sent
+	    twitter:direct-messages/show
+	    twitter:direct-messages/events/list
+	    twitter:direct-messages/events/show
+	    twitter:direct-messages/welcome-messages/list
+	    twitter:direct-messages/welcome-messages/show
+	    twitter:direct-messages/welcome-messages/rules/list
+	    twitter:direct-messages/welcome-messages/rules/show
+	    twitter:favorites/list
+	    twitter:followers/ids
+	    twitter:followers/list
 	    )
     (import (rnrs)
 	    (rename (rfc oauth)
@@ -47,6 +59,14 @@
 	    (net twitter rest util))
 
   (define (compose-query-string uri parameter)
+    (define (->string v)
+      (cond ((string? v) v)
+	    ((boolean? v) (if v "true" "false"))
+	    ((number? v) (number->string v))
+	    ((symbol? v) (symbol->string v))
+	    ((keyword? v) (keyword->string v))
+	    (else (assertion-violation 'compose-query-string
+				       "unknown type of object" v))))
     (define (concat parameter)
       (let-values (((out extract) (open-string-output-port)))
 	(let loop ((parameter parameter) (first? #t))
@@ -57,7 +77,7 @@
 		(unless first? (put-string out "&"))
 		(put-string out (keyword->string k))
 		(put-string out "=")
-		(put-string out (uri-encode-string v))
+		(put-string out (uri-encode-string (->string v)))
 		(loop (cddr parameter) #f))))))
     (string-append uri "?" (concat parameter)))
 
@@ -100,4 +120,29 @@
     "/1.1/collections/list" (required user_id screen_name))
   (define-twitter-get-api twitter:collections/show
     "/1.1/collections/list" (required id))
+  (define-twitter-get-api twitter:direct-messages
+    "/1.1/direct_messages.json" (required))
+  (define-twitter-get-api twitter:direct-messages/sent
+    "/1.1/direct_messages/sent.json" (required))
+  (define-twitter-get-api twitter:direct-messages/show
+    "/1.1/direct_messages/show.json" (required id))
+  (define-twitter-get-api twitter:direct-messages/events/list
+    "/1.1/direct_messages/events/list.json" (required))
+  (define-twitter-get-api twitter:direct-messages/events/show
+    "/1.1/direct_messages/events/show.json" (required id))
+  (define-twitter-get-api twitter:direct-messages/welcome-messages/list
+    "/1.1/direct_messages/welcome_messages/list.json" (required))
+  (define-twitter-get-api twitter:direct-messages/welcome-messages/show
+    "/1.1/direct_messages/welcome_messages/show.json" (required id))
+  (define-twitter-get-api twitter:direct-messages/welcome-messages/rules/list
+    "/1.1/direct_messages/welcome_messages/rules/list.json" (required))
+  (define-twitter-get-api twitter:direct-messages/welcome-messages/rules/show
+    "/1.1/direct_messages/welcome_messages/rules/show.json" (required id))
+  (define-twitter-get-api twitter:favorites/list
+    "/1.1/favorites/list.json" (required))
+  (define-twitter-get-api twitter:followers/ids
+    "/1.1/followers/ids.json" (required))
+  (define-twitter-get-api twitter:followers/list
+    "/1.1/followers/list.json" (required))
+  
   )

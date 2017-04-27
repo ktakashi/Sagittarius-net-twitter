@@ -96,6 +96,11 @@
       :description
       :url
       :timeline_order
+      :since_id
+      :max_id
+      :page
+      :user_id
+      :screen_name
       ))
   (define (twitter-parameter&headers options)
     (define (err)

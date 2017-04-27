@@ -49,6 +49,14 @@
 	    (net twitter conditions)
 	    (net twitter rest util))
 
+  (define (->string v)
+    (cond ((string? v) v)
+	  ((boolean? v) (if v "true" "false"))
+	  ((number? v) (number->string v))
+	  ((symbol? v) (symbol->string v))
+	  ((keyword? v) (keyword->string v))
+	  (else (assertion-violation 'compose-query-string
+				     "unknown type of object" v))))
   (define (compose-form-parameters parameters)
     (define (->name&value parameters)
       (define (err)
@@ -57,20 +65,21 @@
       (let loop ((parameters parameters) (r '()))
 	(cond ((null? parameters) r)
 	      ((null? (cdr parameters)) (err))
-	      ((and (keyword? (car parameters)) (string? (cadr parameters)))
+	      ((keyword? (car parameters))
 	       (loop (cddr parameters)
-		     (cons (string-append (keyword->string (car parameters))
-					  "="
-					  (uri-encode-string (cadr parameters)))
+		     (cons (string-append
+			    (keyword->string (car parameters))
+			    "="
+			    (uri-encode-string (->string (cadr parameters))))
 			   r)))
 	      (else (err)))))
     (string-join (->name&value parameters) "&"))
   
   (define (encode-parameters parameters)
     (define (encode-string p)
-      (if (string? p)
-	  (uri-encode-string p)
-	  p))
+      (if (keyword? p)
+	  p
+	  (uri-encode-string (->string p))))
     (map encode-string parameters))
 
   (define (send-post-request conn uri parameters headers)
