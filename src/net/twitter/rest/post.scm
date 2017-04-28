@@ -29,7 +29,8 @@
 ;;;  
 
 (library (net twitter rest post)
-    (export twitter:collections/create
+    (export twitter:account/remove-profile-banner
+	    twitter:collections/create
 	    twitter:statuses/update
 	    twitter:media/upload
 	    twitter:media/chunk-upload
@@ -49,14 +50,6 @@
 	    (net twitter conditions)
 	    (net twitter rest util))
 
-  (define (->string v)
-    (cond ((string? v) v)
-	  ((boolean? v) (if v "true" "false"))
-	  ((number? v) (number->string v))
-	  ((symbol? v) (symbol->string v))
-	  ((keyword? v) (keyword->string v))
-	  (else (assertion-violation 'compose-query-string
-				     "unknown type of object" v))))
   (define (compose-form-parameters parameters)
     (define (->name&value parameters)
       (define (err)
@@ -95,9 +88,12 @@
     (lambda (x)
       (define (keyword&id id)
 	(cons (symbol->keyword (syntax->datum id)) id))
+      (define (->name k uri)
+	(datum->syntax k (twitter-uri->api-name uri)))
       (syntax-case x ()
-	((k name uri req ...)
-	 (with-syntax ((((key . req) ...)
+	((k uri req ...)
+	 (with-syntax ((name (->name #'k #'uri))
+		       (((key . req) ...)
 			(datum->syntax #'k (map keyword&id #'(req ...)))))
 	   #'(define (name conn req ... . opt)
 	       (let-values (((parameters headers)
@@ -106,10 +102,9 @@
 		  (send-post-request conn uri
 				     (append `(key ,req) ... parameters)
 				     headers)))))))))
-  (define-twitter-simple-post-api twitter:collections/create
-    "/1.1/collections/create" name)
-  (define-twitter-simple-post-api twitter:statuses/update
-    "/1.1/statuses/update.json" status)
+  (define-twitter-simple-post-api "/1.1/account/remove_profile_banner.json")
+  (define-twitter-simple-post-api "/1.1/collections/create.json" name)
+  (define-twitter-simple-post-api "/1.1/statuses/update.json" status)
 
 ;;; multipart request
   (define (send-multipart-request conn uri parts parameters headers)

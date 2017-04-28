@@ -28,11 +28,14 @@
 ;;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;  
 
+#!read-macro=sagittarius/regex
 (library (net twitter rest util)
     (export parse-twitter-response
 	    make-twitter-connection
 	    wrap-twitter-response
-	    twitter-parameter&headers)
+	    twitter-parameter&headers
+	    ->string
+	    twitter-uri->api-name)
     (import (rnrs)
 	    (text json)
 	    (text json object-builder)
@@ -40,6 +43,7 @@
 	    (rfc oauth)
 	    (rfc :5322)
 	    (sagittarius)
+	    (sagittarius regex)
 	    (util hashtables)
 	    (net twitter conditions)
 	    (only (net twitter connections) make-twitter-connection))
@@ -53,12 +57,11 @@
 		   (make-twitter-error "code" "message"))))))
   
   (define (parse-twitter-response status header body)
-    (unless (string-prefix? "application/json"
-			    (rfc5322-header-ref header "content-type" ""))
+    (unless (eqv? (string-ref status 0) #\2)
       (raise (condition
 	      (make-http-error status header (utf8->string body))
 	      (make-who-condition 'parse-twitter-response)
-	      (make-message-condition "content-type is not JSON"))))
+	      (make-message-condition "Got HTTP error"))))
     (unless (eqv? (string-ref status 0) #\2)
       (raise (condition
 	      (twitter-errors-errors
@@ -66,7 +69,10 @@
 	      (make-http-error status header (utf8->string body))
 	      (make-who-condition 'parse-twitter-response)
 	      (make-message-condition "got error status"))))
-    (json-read (open-string-input-port (utf8->string body))))
+    (if (string-prefix? "application/json"
+			(rfc5322-header-ref header "content-type" ""))
+	(json-read (open-string-input-port (utf8->string body)))
+	(utf8->string body)))
 
 
   (define-syntax wrap-twitter-response
@@ -82,6 +88,14 @@
       :lat
       :long
       :place_id
+      :query
+      :ip
+      :granularity
+      :accuracy
+      :max_results
+      :contained_within
+      :attribute:street_address
+      :callback
       :desplay_coordinates
       :trim_user
       :media_ids
@@ -117,4 +131,23 @@
 	     (loop (cddr options)
 		   params
 		   (cons* (car options) (cadr options) headers))))))
+
+  (define (->string v)
+    (cond ((string? v) v)
+	  ((boolean? v) (if v "true" "false"))
+	  ((number? v) (number->string v))
+	  ((symbol? v) (symbol->string v))
+	  ((keyword? v) (keyword->string v))
+	  (else (assertion-violation 'compose-query-string
+				     "unknown type of object" v))))
+
+  (define (twitter-uri->api-name uri)
+    (cond ((#/\/1.1\/(.+?)\.json/ uri) =>
+	   (lambda (m)
+	     (let ((name (m 1)))
+	       (string->symbol
+		(string-append "twitter:" (regex-replace-all #/_/ name "-"))))))
+	  (else (assertion-violation 'twitter-uri->api-name
+				     "invalid Twitter API uri" uri))))
+
   )

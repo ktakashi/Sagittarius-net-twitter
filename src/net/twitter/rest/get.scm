@@ -49,6 +49,25 @@
 	    twitter:favorites/list
 	    twitter:followers/ids
 	    twitter:followers/list
+	    twitter:friends/ids
+	    twitter:friends/list
+	    twitter:friendships/incoming
+	    twitter:friendships/lookup
+	    twitter:friendships/no-retweets/ids
+	    twitter:friendships/outgoing
+	    twitter:friendships/show
+	    twitter:geo/id
+	    twitter:geo/reverse-geocode
+	    twitter:geo/search
+	    twitter:help/configuration
+	    twitter:help/languages
+	    twitter:help/privacy
+	    twitter:help/tos
+	    twitter:lists/list
+	    twitter:lists/members
+	    twitter:lists/members/show
+	    twitter:lists/memberships
+	    twitter:lists/ownerships
 	    )
     (import (rnrs)
 	    (rename (rfc oauth)
@@ -59,14 +78,6 @@
 	    (net twitter rest util))
 
   (define (compose-query-string uri parameter)
-    (define (->string v)
-      (cond ((string? v) v)
-	    ((boolean? v) (if v "true" "false"))
-	    ((number? v) (number->string v))
-	    ((symbol? v) (symbol->string v))
-	    ((keyword? v) (keyword->string v))
-	    (else (assertion-violation 'compose-query-string
-				       "unknown type of object" v))))
     (define (concat parameter)
       (let-values (((out extract) (open-string-output-port)))
 	(let loop ((parameter parameter) (first? #t))
@@ -85,20 +96,21 @@
     (lambda (x)
       (define (keyword&id id)
 	(cons (symbol->keyword (syntax->datum id)) id))
+      (define (->name k uri)
+	(datum->syntax k (twitter-uri->api-name uri)))
       (syntax-case x (required)
-	((_ name uri)
-	 #'(define (name conn . opt)
-	     (wrap-twitter-response
-	      (apply twitter-request conn 'GET uri opt))))
-	((_ name uri (required))
-	 #'(define (name conn . opt)
-	     (let-values (((parameter headers) (twitter-parameter&headers opt)))
-	       (wrap-twitter-response
-		(apply twitter-request conn 'GET
-		       (compose-query-string uri parameter) opt)))))
-	((k name uri (required req ...))
-	 (with-syntax ((((key . req) ...)
-			(datum->syntax #'k (map keyword&id #'(req ...)))))
+	((k uri)
+	 (with-syntax ((name (->name #'k #'uri)))
+	   #'(define (name conn . opt)
+	       (let-values (((parameter headers)
+			     (twitter-parameter&headers opt)))
+		 (wrap-twitter-response
+		  (apply twitter-request conn 'GET
+			 (compose-query-string uri parameter) opt))))))
+	((k uri req1 req* ...)
+	 (with-syntax ((name (->name #'k #'uri))
+		       (((key . req) ...)
+			(datum->syntax #'k (map keyword&id #'(req1 req* ...)))))
 	   #'(define (name conn req ... . opt)
 	       (let-values (((parameter headers)
 			     (twitter-parameter&headers opt)))
@@ -107,42 +119,50 @@
 			 (compose-query-string uri (append `(key ,req) ...
 							   parameter))
 			 opt)))))))))
-  (define-twitter-get-api twitter:account/settings "/1.1/account/settings.json")
-  (define-twitter-get-api twitter:account/verify-credentials
-    "/1.1/account/verify_credentials.json" (required))
-  (define-twitter-get-api twitter:application/rate-limit-status
-    "/1.1/application/rate_limit_status.json" (required))
-  (define-twitter-get-api twitter:blocks/ids "/1.1/blocks/ids" (required))
-  (define-twitter-get-api twitter:blocks/list "/1.1/blocks/list" (required))
-  (define-twitter-get-api twitter:collections/entries
-    "/1.1/collections/entries" (required id))
-  (define-twitter-get-api twitter:collections/list
-    "/1.1/collections/list" (required user_id screen_name))
-  (define-twitter-get-api twitter:collections/show
-    "/1.1/collections/list" (required id))
-  (define-twitter-get-api twitter:direct-messages
-    "/1.1/direct_messages.json" (required))
-  (define-twitter-get-api twitter:direct-messages/sent
-    "/1.1/direct_messages/sent.json" (required))
-  (define-twitter-get-api twitter:direct-messages/show
-    "/1.1/direct_messages/show.json" (required id))
-  (define-twitter-get-api twitter:direct-messages/events/list
-    "/1.1/direct_messages/events/list.json" (required))
-  (define-twitter-get-api twitter:direct-messages/events/show
-    "/1.1/direct_messages/events/show.json" (required id))
-  (define-twitter-get-api twitter:direct-messages/welcome-messages/list
-    "/1.1/direct_messages/welcome_messages/list.json" (required))
-  (define-twitter-get-api twitter:direct-messages/welcome-messages/show
-    "/1.1/direct_messages/welcome_messages/show.json" (required id))
-  (define-twitter-get-api twitter:direct-messages/welcome-messages/rules/list
-    "/1.1/direct_messages/welcome_messages/rules/list.json" (required))
-  (define-twitter-get-api twitter:direct-messages/welcome-messages/rules/show
-    "/1.1/direct_messages/welcome_messages/rules/show.json" (required id))
-  (define-twitter-get-api twitter:favorites/list
-    "/1.1/favorites/list.json" (required))
-  (define-twitter-get-api twitter:followers/ids
-    "/1.1/followers/ids.json" (required))
-  (define-twitter-get-api twitter:followers/list
-    "/1.1/followers/list.json" (required))
+  (define-twitter-get-api "/1.1/account/settings.json")
+  (define-twitter-get-api "/1.1/account/verify_credentials.json")
+  (define-twitter-get-api "/1.1/application/rate_limit_status.json")
+  (define-twitter-get-api "/1.1/blocks/ids.json")
+  (define-twitter-get-api "/1.1/blocks/list.json")
+  (define-twitter-get-api "/1.1/collections/entries.json")
+  (define-twitter-get-api "/1.1/collections/list.json")
+  (define-twitter-get-api "/1.1/collections/show.json" id)
+  (define-twitter-get-api "/1.1/direct_messages.json")
+  (define-twitter-get-api "/1.1/direct_messages/sent.json")
+  (define-twitter-get-api "/1.1/direct_messages/show.json")
+  (define-twitter-get-api "/1.1/direct_messages/events/list.json")
+  (define-twitter-get-api "/1.1/direct_messages/events/show.json" id)
+  (define-twitter-get-api "/1.1/direct_messages/welcome_messages/list.json")
+  (define-twitter-get-api "/1.1/direct_messages/welcome_messages/show.json")
+  (define-twitter-get-api "/1.1/direct_messages/welcome_messages/rules/list.json")
+  (define-twitter-get-api "/1.1/direct_messages/welcome_messages/rules/show.json" id)
+  (define-twitter-get-api "/1.1/favorites/list.json")
+  (define-twitter-get-api "/1.1/followers/ids.json")
+  (define-twitter-get-api "/1.1/followers/list.json")
+  (define-twitter-get-api "/1.1/friends/ids.json")
+  (define-twitter-get-api "/1.1/friends/list.json")
+  (define-twitter-get-api "/1.1/friendships/incoming.json")
+  (define-twitter-get-api "/1.1/friendships/lookup.json")
+  (define-twitter-get-api "/1.1/friendships/no_retweets/ids.json")
+  (define-twitter-get-api "/1.1/friendships/outgoing.json")
+  (define-twitter-get-api "/1.1/friendships/show.json")
+  (define-twitter-get-api "/1.1/geo/reverse_geocode.json" lat long)
+  (define-twitter-get-api "/1.1/geo/search.json")
+  (define-twitter-get-api "/1.1/help/configuration.json")
+  (define-twitter-get-api "/1.1/help/languages.json")
+  (define-twitter-get-api "/1.1/help/privacy.json")
+  (define-twitter-get-api "/1.1/help/tos.json")
+  (define-twitter-get-api "/1.1/lists/list.json")
+  (define-twitter-get-api "/1.1/lists/members.json")
+  (define-twitter-get-api "/1.1/lists/members/show.json")
+  (define-twitter-get-api "/1.1/lists/memberships.json")
+  (define-twitter-get-api "/1.1/lists/ownerships.json")
   
-  )
+  ;; path param
+  (define (twitter:geo/id conn place-id . opt)
+    (let-values (((parameter header) (twitter-parameter&headers opt)))
+      (wrap-twitter-response
+       (apply twitter-request conn 'GET
+	      (format "/1.1/geo/id/~a.json" (uri-encode-string place-id))
+	      header))))
+)
