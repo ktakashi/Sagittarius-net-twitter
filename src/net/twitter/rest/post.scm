@@ -48,7 +48,9 @@
 	    (sagittarius)
 	    (sagittarius control)
 	    (net twitter conditions)
-	    (net twitter rest util))
+	    (rename (net twitter rest util)
+		    (twitter-connection-change-domain change-domain)
+		    (+twitter-upload-server+ +upload-server+)))
 
   (define (compose-form-parameters parameters)
     (define (->name&value parameters)
@@ -132,16 +134,7 @@
 
   (define (make-content-disposision name)
     `(("content-disposition" ("form-data" ("name" . ,name)))))
-  (define (change-domain conn domain :optional (ctr make-http1-connection))
-    (open-oauth-connection!
-     (make-oauth-connection
-      (ctr domain #t)
-      (oauth-connection-consumer-key conn)
-      (oauth-connection-access-token conn)
-      (oauth-signer-clone (oauth-connection-signer conn)))))
-  
-  (define-constant +upload-server+ "upload.twitter.com")
-  
+    
   (define (twitter:media/upload conn media-type data . options)
     (let-values (((parameters headers) (twitter-parameter&headers options)))
       (let ((changed (change-domain conn +upload-server+))
@@ -158,11 +151,7 @@
 	  headers)))))
   
   (define (ensure-upload-domain conn . opt)
-    (define http-connection (oauth-connection-http-connection conn))
-    (define server (http-connection-server http-connection))
-    (if (string=? server +upload-server+)
-	conn
-	(apply change-domain conn +upload-server+ opt)))
+    (apply twitter-connection-ensure-domain conn +upload-server+ opt))
 		  
   (define (twitter:media/chunk-upload@init conn total-bytes media-type . opt)
     (let-values (((parameters headers) (twitter-parameter&headers opt)))

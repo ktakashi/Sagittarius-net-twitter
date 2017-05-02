@@ -68,6 +68,28 @@
 	    twitter:lists/members/show
 	    twitter:lists/memberships
 	    twitter:lists/ownerships
+	    twitter:lists/show
+	    twitter:lists/statuses
+	    twitter:lists/subscribers
+	    twitter:lists/subscribers/show
+	    twitter:lists/subscriptions
+	    twitter:media/upload@status
+	    twitter:mutes/users/ids
+	    twitter:mutes/users/list
+	    twitter:saved-searches/list
+	    twitter:saved-searches/show
+	    twitter:search/tweets
+	    twitter:statuses/home-timeline
+	    twitter:statuses/lookup
+	    twitter:statuses/mentions-timeline
+	    twitter:statuses/retweeters/ids
+	    twitter:statuses/retweets
+	    twitter:statuses/retweets-of-me
+	    twitter:statuses/show
+	    twitter:statuses/user-timeline
+	    twitter:trends/available
+	    twitter:trends/closest
+	    twitter:trends/place
 	    )
     (import (rnrs)
 	    (rename (rfc oauth)
@@ -96,9 +118,8 @@
     (lambda (x)
       (define (keyword&id id)
 	(cons (symbol->keyword (syntax->datum id)) id))
-      (define (->name k uri)
-	(datum->syntax k (twitter-uri->api-name uri)))
-      (syntax-case x (required)
+      (define (->name k uri) (datum->syntax k (twitter-uri->api-name uri)))
+      (syntax-case x ()
 	((k uri)
 	 (with-syntax ((name (->name #'k #'uri)))
 	   #'(define (name conn . opt)
@@ -119,6 +140,7 @@
 			 (compose-query-string uri (append `(key ,req) ...
 							   parameter))
 			 opt)))))))))
+  
   (define-twitter-get-api "/1.1/account/settings.json")
   (define-twitter-get-api "/1.1/account/verify_credentials.json")
   (define-twitter-get-api "/1.1/application/rate_limit_status.json")
@@ -157,6 +179,36 @@
   (define-twitter-get-api "/1.1/lists/members/show.json")
   (define-twitter-get-api "/1.1/lists/memberships.json")
   (define-twitter-get-api "/1.1/lists/ownerships.json")
+  (define-twitter-get-api "/1.1/lists/show.json")
+  (define-twitter-get-api "/1.1/lists/statuses.json")
+  (define-twitter-get-api "/1.1/lists/subscribers.json")
+  (define-twitter-get-api "/1.1/lists/subscribers/show.json")
+  (define-twitter-get-api "/1.1/lists/subscriptions.json")
+  (define-twitter-get-api "/1.1/mutes/users/ids.json")
+  (define-twitter-get-api "/1.1/mutes/users/list.json")
+  (define-twitter-get-api "/1.1/saved_searches/list.json")
+  (define-twitter-get-api "/1.1/search/tweets.json" q)
+  (define-twitter-get-api "/1.1/statuses/home_timeline.json")
+  (define-twitter-get-api "/1.1/statuses/lookup.json" id)
+  (define-twitter-get-api "/1.1/statuses/mentions_timeline.json")
+  (define-twitter-get-api "/1.1/statuses/retweeters/ids.json" id)
+  (define-twitter-get-api "/1.1/statuses/retweets_of_me.json")
+  (define-twitter-get-api "/1.1/statuses/show.json" id)
+  (define-twitter-get-api "/1.1/statuses/user_timeline.json")
+  (define-twitter-get-api "/1.1/trends/available.json")
+  (define-twitter-get-api "/1.1/trends/closest.json" lat long)
+  (define-twitter-get-api "/1.1/trends/place.json" id)
+
+  ;; different name convension
+  (define (twitter:media/upload@status conn media-id . opt)
+    (let-values (((parameter header) (twitter-parameter&headers opt)))
+      (wrap-twitter-response
+       (apply twitter-request
+	      (twitter-connection-ensure-domain conn +twitter-upload-server+)
+	      'GET
+	      (compose-query-string "/1.1/media/upload.json"
+				    `(:command "STATUS" :media_id ,media-id))
+	      header))))
   
   ;; path param
   (define (twitter:geo/id conn place-id . opt)
@@ -164,5 +216,21 @@
       (wrap-twitter-response
        (apply twitter-request conn 'GET
 	      (format "/1.1/geo/id/~a.json" (uri-encode-string place-id))
+	      header))))
+  (define (twitter:saved-searches/show conn id . opt)
+    (let-values (((parameter header) (twitter-parameter&headers opt)))
+      (wrap-twitter-response
+       (apply twitter-request conn 'GET
+	      (format "/1.1/saved_searches/show/~a.json" (uri-encode-string id))
+	      header))))
+  (define (twitter:statuses/retweets conn id . opt)
+    (define uri (format "/1.1/statuses/retweets/~a.json"
+			(uri-encode-string id)))
+    (let-values (((parameter header) (twitter-parameter&headers opt)))
+      (wrap-twitter-response
+       (apply twitter-request conn 'GET
+	      (if (null? parameter)
+		  uri
+		  (apply compose-query-string uri parameter))
 	      header))))
 )

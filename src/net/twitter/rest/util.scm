@@ -35,13 +35,18 @@
 	    wrap-twitter-response
 	    twitter-parameter&headers
 	    ->string
-	    twitter-uri->api-name)
+	    twitter-uri->api-name
+	    twitter-connection-change-domain
+	    twitter-connection-ensure-domain
+	    +twitter-upload-server+
+	    )
     (import (rnrs)
 	    (text json)
 	    (text json object-builder)
 	    (srfi :13)
 	    (rfc oauth)
 	    (rfc :5322)
+	    (rfc http-connections)
 	    (sagittarius)
 	    (sagittarius regex)
 	    (util hashtables)
@@ -55,6 +60,22 @@
      (make-twitter-errors
       ("errors" (@ condition
 		   (make-twitter-error "code" "message"))))))
+
+  (define-constant +twitter-upload-server+ "upload.twitter.com")
+  (define (twitter-connection-change-domain conn domain
+	    :optional (ctr make-http1-connection))
+    (open-oauth-connection!
+     (make-oauth-connection
+      (ctr domain #t)
+      (oauth-connection-consumer-key conn)
+      (oauth-connection-access-token conn)
+      (oauth-signer-clone (oauth-connection-signer conn)))))
+  (define (twitter-connection-ensure-domain conn domain . opt)
+    (define http-connection (oauth-connection-http-connection conn))
+    (define server (http-connection-server http-connection))
+    (if (string=? server domain)
+	conn
+	(apply twitter-connection-change-domain conn domain opt)))
   
   (define (parse-twitter-response status header body)
     (unless (eqv? (string-ref status 0) #\2)
@@ -115,6 +136,19 @@
       :page
       :user_id
       :screen_name
+      :slug
+      :owner_screen_name
+      :owner_id
+      :include_rts
+      :geocode
+      :lang
+      :locale
+      :result_type
+      :until
+      :exclude_replies
+      :map
+      :include_user_entities
+      :contributor_details
       ))
   (define (twitter-parameter&headers options)
     (define (err)
