@@ -90,6 +90,13 @@
 	    twitter:trends/available
 	    twitter:trends/closest
 	    twitter:trends/place
+	    twitter:users/lookup
+	    twitter:users/profile-banner
+	    twitter:users/search
+	    twitter:users/show
+	    twitter:users/suggestions
+	    twitter:users/suggestions/slug
+	    twitter:users/suggestions/slug/members
 	    )
     (import (rnrs)
 	    (rename (rfc oauth)
@@ -198,6 +205,11 @@
   (define-twitter-get-api "/1.1/trends/available.json")
   (define-twitter-get-api "/1.1/trends/closest.json" lat long)
   (define-twitter-get-api "/1.1/trends/place.json" id)
+  (define-twitter-get-api "/1.1/users/lookup.json")
+  (define-twitter-get-api "/1.1/users/profile_banner.json")
+  (define-twitter-get-api "/1.1/users/search.json" q)
+  (define-twitter-get-api "/1.1/users/show.json")
+  (define-twitter-get-api "/1.1/users/suggestions.json")
 
   ;; different name convension
   (define (twitter:media/upload@status conn media-id . opt)
@@ -226,6 +238,27 @@
   (define (twitter:statuses/retweets conn id . opt)
     (define uri (format "/1.1/statuses/retweets/~a.json"
 			(uri-encode-string id)))
+    (let-values (((parameter header) (twitter-parameter&headers opt)))
+      (wrap-twitter-response
+       (apply twitter-request conn 'GET
+	      (if (null? parameter)
+		  uri
+		  (apply compose-query-string uri parameter))
+	      header))))
+
+  (define (twitter:users/suggestions/slug conn slug . opt)
+    (define uri (format "/1.1/users/suggestions/~a.json"
+			(uri-encode-string slug)))
+    (let-values (((parameter header) (twitter-parameter&headers opt)))
+      (wrap-twitter-response
+       (apply twitter-request conn 'GET
+	      (if (null? parameter)
+		  uri
+		  (apply compose-query-string uri parameter))
+	      header))))
+  (define (twitter:users/suggestions/slug/members conn slug . opt)
+    (define uri (format "/1.1/users/suggestions/~a/members.json"
+			(uri-encode-string slug)))
     (let-values (((parameter header) (twitter-parameter&headers opt)))
       (wrap-twitter-response
        (apply twitter-request conn 'GET
