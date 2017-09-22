@@ -92,7 +92,7 @@
 	      (make-message-condition "got error status"))))
     (if (string-prefix? "application/json"
 			(rfc5322-header-ref header "content-type" ""))
-	(json-read (open-string-input-port (utf8->string body)))
+	(utf8->string body)
 	(utf8->string body)))
 
 
