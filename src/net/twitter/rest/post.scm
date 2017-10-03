@@ -31,6 +31,8 @@
 (library (net twitter rest post)
     (export twitter:account/remove-profile-banner
 	    twitter:collections/create
+	    twitter:favorites/create
+	    twitter:favorites/destroy
 	    twitter:statuses/update
 	    twitter:media/upload
 	    twitter:media/chunk-upload
@@ -108,7 +110,9 @@
   (define-twitter-simple-post-api "/1.1/account/remove_profile_banner.json")
   (define-twitter-simple-post-api "/1.1/collections/create.json" name)
   (define-twitter-simple-post-api "/1.1/statuses/update.json" status)
-
+  (define-twitter-simple-post-api "/1.1/favorites/create.json" id)
+  (define-twitter-simple-post-api "/1.1/favorites/destroy.json" id)
+  
 ;;; multipart request
   (define (send-multipart-request conn uri parts parameters headers)
     (define (compose-uri uri parameter)
