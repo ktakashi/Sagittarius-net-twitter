@@ -30,8 +30,7 @@
 
 #!read-macro=sagittarius/regex
 (library (net twitter rest util)
-    (export parse-twitter-response
-	    make-twitter-connection
+    (export make-twitter-connection
 	    wrap-twitter-response
 	    twitter-parameter&headers
 	    ->string
@@ -77,30 +76,11 @@
 	conn
 	(apply twitter-connection-change-domain conn domain opt)))
   
-  (define (parse-twitter-response status header body)
-    (unless (eqv? (string-ref status 0) #\2)
-      (raise (condition
-	      (make-http-error status header (utf8->string body))
-	      (make-who-condition 'parse-twitter-response)
-	      (make-message-condition "Got HTTP error"))))
-    (unless (eqv? (string-ref status 0) #\2)
-      (raise (condition
-	      (twitter-errors-errors
-	       (json-string->object (utf8->string body) twitter-error-builder))
-	      (make-http-error status header (utf8->string body))
-	      (make-who-condition 'parse-twitter-response)
-	      (make-message-condition "got error status"))))
-    (if (string-prefix? "application/json"
-			(rfc5322-header-ref header "content-type" ""))
-	(utf8->string body)
-	(utf8->string body)))
-
-
   (define-syntax wrap-twitter-response
     (syntax-rules ()
       ((_ exprs ...)
        (let-values (((s h b) (let () exprs ...)))
-	 (parse-twitter-response s h b)))))
+	 (values s h (utf8->string b))))))
   
   ;; bit ugly...
   (define-constant +twitter-parameter-keywords+

@@ -243,14 +243,18 @@
 	(json-read (open-string-input-port json)))
       (cdr (find (lambda (v) (string=? (car v) "media_id_string"))
 		 (vector->list (string->json json)))))
-    (let* ((json (apply twitter:media/chunk-upload@init new-conn
-			(get-size data) media-type opt))
-	   (media-id (find-media-id json))
-	   (port (get-port data)))
-      (guard (e (else (close-port port) (raise e)))
-	(apply twitter:media/chunk-upload@append new-conn media-id port
-	       :buffer-size buffer-size opt)
-	(close-port port))
-      (rlet1 r (apply twitter:media/chunk-upload@finalize new-conn media-id opt)
-	(close-oauth-connection! new-conn))))    
+    (let-values (((s h json)
+		  (apply twitter:media/chunk-upload@init new-conn
+			 (get-size data) media-type opt)))
+      (let ((media-id (find-media-id json))
+	    (port (get-port data)))
+	(guard (e (else (close-port port) (raise e)))
+	  (apply twitter:media/chunk-upload@append new-conn media-id port
+		 :buffer-size buffer-size opt)
+	  (close-port port))
+	(let-values (((s h b)
+		      (apply twitter:media/chunk-upload@finalize 
+			     new-conn media-id opt)))
+	  (close-oauth-connection! new-conn)
+	  (values s h b)))))
   )
