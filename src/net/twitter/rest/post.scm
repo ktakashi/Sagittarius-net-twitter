@@ -33,6 +33,8 @@
 	    twitter:collections/create
 	    twitter:favorites/create
 	    twitter:favorites/destroy
+	    twitter:statuses/retweet
+	    twitter:statuses/unretweet
 	    twitter:statuses/update
 	    twitter:media/upload
 	    twitter:media/chunk-upload
@@ -112,7 +114,21 @@
   (define-twitter-simple-post-api "/1.1/statuses/update.json" status)
   (define-twitter-simple-post-api "/1.1/favorites/create.json" id)
   (define-twitter-simple-post-api "/1.1/favorites/destroy.json" id)
-  
+
+;;; path params
+  (define (twitter:statuses/retweet conn id . opt)
+    (define uri (format "/1.1/statuses/retweet/~a.json"
+			(uri-encode-string id)))
+    (let-values (((parameter header) (twitter-parameter&headers opt)))
+      (wrap-twitter-response
+       (send-post-request conn uri parameter header))))
+  (define (twitter:statuses/unretweet conn id . opt)
+    (define uri (format "/1.1/statuses/unretweet/~a.json"
+			(uri-encode-string id)))
+    (let-values (((parameter header) (twitter-parameter&headers opt)))
+      (wrap-twitter-response
+       (send-post-request conn uri parameter header))))
+
 ;;; multipart request
   (define (send-multipart-request conn uri parts parameters headers)
     (define (compose-uri uri parameter)
