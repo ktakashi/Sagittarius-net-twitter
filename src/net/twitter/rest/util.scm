@@ -100,6 +100,8 @@
       :desplay_coordinates
       :trim_user
       :media_ids
+      :enable_dm_commands
+      :fail_dm_commands
       :include_entities
       :skip_status
       :include_email
@@ -129,6 +131,9 @@
       :map
       :include_user_entities
       :contributor_details
+      :tweet_mode
+      :attachment_url
+      :auto_populate_reply_metadata
       ))
   (define (twitter-parameter&headers options)
     (define (err)
@@ -139,12 +144,20 @@
 	    ((null? (cdr options)) (err))
 	    ((memq (car options) +twitter-parameter-keywords+)
 	     (loop (cddr options)
-		   (cons* (car options) (cadr options) params)
+		   (let ((name (car options))
+			 (value (cadr options)))
+		     (if value
+			 (cons* (car options) (cadr options) params)
+			 params))
 		   headers))
 	    (else
 	     (loop (cddr options)
 		   params
-		   (cons* (car options) (cadr options) headers))))))
+		   (let ((name (car options))
+			 (value (cadr options)))
+		     (if value
+			 (cons* (car options) (cadr options) headers)
+			 headers)))))))
 
   (define (->string v)
     (cond ((string? v) v)
