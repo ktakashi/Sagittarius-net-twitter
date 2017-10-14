@@ -134,6 +134,7 @@
       :tweet_mode
       :attachment_url
       :auto_populate_reply_metadata
+      :exclude_reply_user_ids
       ))
   (define (twitter-parameter&headers options)
     (define (err)
