@@ -211,7 +211,7 @@
 	  (raise (condition
 		  (make-http-error s h "")
 		  (make-who-condition
-		   'twitter-media-chunk-upload/append)
+		   'twitter:media/chunk-upload@append)
 		  (make-message-condition "Failed to upload chunk"))))))
     (let-values (((parameters headers) (twitter-parameter&headers opt)))
       ;; we use HTTP/2 connection to reuse socket if it's not
@@ -252,8 +252,7 @@
       (if (string? data)
 	  (open-file-input-port data)
 	  data))
-    (define (close-port port)
-      (when (string? data) (close-input-port port)))
+    (define (close-port port) (when (string? data) (close-input-port port)))
     (define new-conn (ensure-upload-domain conn make-http2-connection))
     (define (find-media-id json)
       (define (string->json json)
@@ -272,6 +271,6 @@
 	(let-values (((s h b)
 		      (apply twitter:media/chunk-upload@finalize 
 			     new-conn media-id opt)))
-	  (close-oauth-connection! new-conn)
+	  (unless (eq? new-conn conn) (close-oauth-connection! new-conn))
 	  (values s h b)))))
   )
