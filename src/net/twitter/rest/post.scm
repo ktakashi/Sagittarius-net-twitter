@@ -56,41 +56,9 @@
 	    (net twitter conditions)
 	    (rename (net twitter rest util)
 		    (twitter-connection-change-domain change-domain)
-		    (+twitter-upload-server+ +upload-server+)))
-
-  (define (compose-form-parameters parameters)
-    (define (->name&value parameters)
-      (define (err)
-	(assertion-violation 'compose-form-parameters "invalid parameter list"
-			     parameters))
-      (let loop ((parameters parameters) (r '()))
-	(cond ((null? parameters) r)
-	      ((null? (cdr parameters)) (err))
-	      ((keyword? (car parameters))
-	       (loop (cddr parameters)
-		     (cons (string-append
-			    (keyword->string (car parameters))
-			    "="
-			    (uri-encode-string (->string (cadr parameters))))
-			   r)))
-	      (else (err)))))
-    (string-join (->name&value parameters) "&"))
-  
-  (define (encode-parameters parameters)
-    (define (encode-string p)
-      (if (keyword? p)
-	  p
-	  (uri-encode-string (->string p))))
-    (map encode-string parameters))
-
-  (define (send-post-request conn uri parameters headers)
-    (apply oauth-request conn 'POST uri
-	   :content-type "application/x-www-form-urlencoded"
-	   :authorization (apply oauth-authorization-header
-				 conn 'POST uri (encode-parameters parameters))
-	   :sender (http-string-sender (oauth-connection-http-connection conn)
-				       (compose-form-parameters parameters))
-	   headers))
+		    (+twitter-upload-server+ +upload-server+)
+		    (twitter-send-post-request send-post-request)
+		    (twitter-encode-parameters encode-parameters)))
 
   (define-syntax define-twitter-simple-post-api
     (lambda (x)

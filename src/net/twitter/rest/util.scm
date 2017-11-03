@@ -38,11 +38,15 @@
 	    twitter-connection-change-domain
 	    twitter-connection-ensure-domain
 	    +twitter-upload-server+
+	    twitter-send-post-request
+	    twitter-encode-parameters
+	    twitter-compose-form-parameters
 	    )
     (import (rnrs)
 	    (text json)
 	    (text json object-builder)
 	    (srfi :13)
+	    (rfc uri)
 	    (rfc oauth)
 	    (rfc :5322)
 	    (rfc http-connections)
@@ -81,6 +85,41 @@
       ((_ exprs ...)
        (let-values (((s h b) (let () exprs ...)))
 	 (values s h (utf8->string b))))))
+
+  (define (twitter-compose-form-parameters parameters)
+    (define (->name&value parameters)
+      (define (err)
+	(assertion-violation 'twitter-compose-form-parameters
+			     "invalid parameter list" parameters))
+      (let loop ((parameters parameters) (r '()))
+	(cond ((null? parameters) r)
+	      ((null? (cdr parameters)) (err))
+	      ((keyword? (car parameters))
+	       (loop (cddr parameters)
+		     (cons (string-append
+			    (keyword->string (car parameters))
+			    "="
+			    (uri-encode-string (->string (cadr parameters))))
+			   r)))
+	      (else (err)))))
+    (string-join (->name&value parameters) "&"))
+
+  (define (twitter-encode-parameters parameters)
+    (define (encode-string p)
+      (if (keyword? p)
+	  p
+	  (uri-encode-string (->string p))))
+    (map encode-string parameters))
+
+  (define (twitter-send-post-request conn uri parameters headers)
+    (apply oauth-request conn 'POST uri
+	   :content-type "application/x-www-form-urlencoded"
+	   :authorization (apply oauth-authorization-header
+				 conn 'POST uri
+				 (twitter-encode-parameters parameters))
+	   :sender (http-string-sender (oauth-connection-http-connection conn)
+		     (twitter-compose-form-parameters parameters))
+	   headers))
   
   ;; bit ugly...
   (define-constant +twitter-parameter-keywords+
