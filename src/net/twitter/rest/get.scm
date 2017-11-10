@@ -134,7 +134,7 @@
 			     (twitter-parameter&headers opt)))
 		 (wrap-twitter-response
 		  (apply twitter-request conn 'GET
-			 (compose-query-string uri parameter) opt))))))
+			 (compose-query-string uri parameter) headers))))))
 	((k uri req1 req* ...)
 	 (with-syntax ((name (->name #'k #'uri))
 		       (((key . req) ...)
@@ -146,7 +146,7 @@
 		  (apply twitter-request conn 'GET
 			 (compose-query-string uri (append `(key ,req) ...
 							   parameter))
-			 opt)))))))))
+			 headers)))))))))
   
   (define-twitter-get-api "/1.1/account/settings.json")
   (define-twitter-get-api "/1.1/account/verify_credentials.json")
@@ -205,12 +205,31 @@
   (define-twitter-get-api "/1.1/trends/available.json")
   (define-twitter-get-api "/1.1/trends/closest.json" lat long)
   (define-twitter-get-api "/1.1/trends/place.json" id)
-  (define-twitter-get-api "/1.1/users/lookup.json")
   (define-twitter-get-api "/1.1/users/profile_banner.json")
   (define-twitter-get-api "/1.1/users/search.json" q)
   (define-twitter-get-api "/1.1/users/show.json")
   (define-twitter-get-api "/1.1/users/suggestions.json")
 
+  ;; encouraged to be POST if it's big
+  ;; (define-twitter-get-api "/1.1/users/lookup.json")
+  (define (twitter:users/lookup conn . opt)
+    (define uri "/1.1/users/lookup.json")
+    (define (use-post? ids screen-names)
+      (let ((check (cadr (or ids screen-names))))
+	;; well, 50 is enough?
+	(> (string-length check) 50)))
+    (let-values (((parameters header) (twitter-parameter&headers opt)))
+      (let ((ids (memq :user_id parameters))
+	    (screen-names (memq :screen_name parameters)))
+	(when (and ids screen-names)
+	  (assertion-violation 'twitter:users/lookup
+			       "user_id and screen_name must not be together"))
+	(wrap-twitter-response
+	 (if (use-post? ids screen-names)
+	     (twitter-send-post-request conn uri parameters header)
+	     (apply twitter-request conn 'GET
+		    (compose-query-string uri parameters) header))))))
+  
   ;; different name convension
   (define (twitter:media/upload@status conn media-id . opt)
     (let-values (((parameter header) (twitter-parameter&headers opt)))
