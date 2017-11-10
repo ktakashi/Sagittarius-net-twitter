@@ -33,6 +33,9 @@
 	    twitter:collections/create
 	    twitter:favorites/create
 	    twitter:favorites/destroy
+	    twitter:friendships/create
+	    twitter:friendships/destroy
+	    twitter:friendships/update
 	    twitter:statuses/destroy
 	    twitter:statuses/retweet
 	    twitter:statuses/unretweet
@@ -115,6 +118,9 @@
   (define-twitter-simple-post-api "/1.1/statuses/update.json" status)
   (define-twitter-simple-post-api "/1.1/favorites/create.json" id)
   (define-twitter-simple-post-api "/1.1/favorites/destroy.json" id)
+  (define-twitter-simple-post-api "/1.1/friendships/create.json")
+  (define-twitter-simple-post-api "/1.1/friendships/destroy.json")
+  (define-twitter-simple-post-api "/1.1/friendships/update.json")
 
 ;;; path params
   (define (make-id-path-param url)

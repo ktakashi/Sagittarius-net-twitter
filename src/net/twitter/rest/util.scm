@@ -132,6 +132,9 @@
       :include_user_entities
       :contributor_details
       :tweet_mode
+      :follow
+      :device
+      :retweets
       :attachment_url
       :auto_populate_reply_metadata
       :exclude_reply_user_ids
